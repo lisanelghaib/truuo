@@ -10,14 +10,15 @@ export class AuthService {
   // Create a new account (register)
   async createAccount(email: string, password: string, name: string) {
     try {
-      const result = await stack.signUp({
+      const result = await stack.signUpWithCredential({
         email,
         password,
       });
 
       // Update display name if registration successful
-      if (result.user) {
-        await result.user.update({ displayName: name });
+      const user = await stack.getUser();
+      if (user) {
+        await user.update({ displayName: name });
       }
 
       return result;
@@ -30,7 +31,7 @@ export class AuthService {
   // Login with email and password
   async login(email: string, password: string) {
     try {
-      const result = await stack.signIn({
+      const result = await stack.signInWithCredential({
         email,
         password,
       });
@@ -44,7 +45,7 @@ export class AuthService {
   // Get current user
   async getCurrentUser() {
     try {
-      const user = stack.getUser();
+      const user = await stack.getUser();
       if (user) {
         return {
           id: user.id,
@@ -62,7 +63,7 @@ export class AuthService {
   // Logout
   async logout() {
     try {
-      await stack.signOut();
+      await stack.redirectToSignOut();
     } catch (error) {
       console.error("Error logging out:", error);
       throw error;
@@ -72,7 +73,7 @@ export class AuthService {
   // Logout from all sessions
   async logoutAll() {
     try {
-      await stack.signOut();
+      await stack.redirectToSignOut();
     } catch (error) {
       console.error("Error logging out from all sessions:", error);
       throw error;
@@ -82,9 +83,8 @@ export class AuthService {
   // Send password recovery email
   async sendPasswordRecovery(email: string) {
     try {
-      const result = await stack.sendPasswordResetEmail({
-        email,
-        redirectUrl: `${window.location.origin}/reset-password`,
+      const result = await stack.sendForgotPasswordEmail(email, {
+        callbackUrl: `${window.location.origin}/reset-password`,
       });
       return result;
     } catch (error) {
@@ -110,11 +110,9 @@ export class AuthService {
   // Send email verification
   async sendEmailVerification() {
     try {
-      const user = stack.getUser();
+      const user = await stack.getUser();
       if (user) {
-        const result = await user.sendVerificationEmail({
-          redirectUrl: `${window.location.origin}/verify-email`,
-        });
+        const result = await user.sendVerificationEmail();
         return result;
       }
       throw new Error("No user logged in");
@@ -127,7 +125,7 @@ export class AuthService {
   // Complete email verification
   async completeEmailVerification(code: string) {
     try {
-      const result = await stack.verifyEmail({ code });
+      const result = await stack.verifyEmail(code);
       return result;
     } catch (error) {
       console.error("Error completing email verification:", error);
