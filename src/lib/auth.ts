@@ -1,23 +1,26 @@
-import { ID } from "appwrite";
-import { account } from "./appwrite";
+import { stack } from "./stack";
 
 export interface User {
-  $id: string;
-  name: string;
-  email: string;
+  id: string;
+  primaryEmail: string | null;
+  displayName: string | null;
 }
 
 export class AuthService {
-  // Create a new account
+  // Create a new account (register)
   async createAccount(email: string, password: string, name: string) {
     try {
-      const userAccount = await account.create(
-        ID.unique(),
+      const result = await stack.signUp({
         email,
         password,
-        name
-      );
-      return userAccount;
+      });
+
+      // Update display name if registration successful
+      if (result.user) {
+        await result.user.update({ displayName: name });
+      }
+
+      return result;
     } catch (error) {
       console.error("Error creating account:", error);
       throw error;
@@ -27,8 +30,11 @@ export class AuthService {
   // Login with email and password
   async login(email: string, password: string) {
     try {
-      const session = await account.createEmailPasswordSession(email, password);
-      return session;
+      const result = await stack.signIn({
+        email,
+        password,
+      });
+      return result;
     } catch (error) {
       console.error("Error logging in:", error);
       throw error;
@@ -38,8 +44,15 @@ export class AuthService {
   // Get current user
   async getCurrentUser() {
     try {
-      const user = await account.get();
-      return user;
+      const user = stack.getUser();
+      if (user) {
+        return {
+          id: user.id,
+          primaryEmail: user.primaryEmail,
+          displayName: user.displayName,
+        } as User;
+      }
+      return null;
     } catch (error) {
       console.error("Error getting current user:", error);
       return null;
@@ -49,7 +62,7 @@ export class AuthService {
   // Logout
   async logout() {
     try {
-      await account.deleteSession("current");
+      await stack.signOut();
     } catch (error) {
       console.error("Error logging out:", error);
       throw error;
@@ -59,7 +72,7 @@ export class AuthService {
   // Logout from all sessions
   async logoutAll() {
     try {
-      await account.deleteSessions();
+      await stack.signOut();
     } catch (error) {
       console.error("Error logging out from all sessions:", error);
       throw error;
@@ -69,10 +82,10 @@ export class AuthService {
   // Send password recovery email
   async sendPasswordRecovery(email: string) {
     try {
-      const result = await account.createRecovery(
+      const result = await stack.sendPasswordResetEmail({
         email,
-        `${window.location.origin}/reset-password`
-      );
+        redirectUrl: `${window.location.origin}/reset-password`,
+      });
       return result;
     } catch (error) {
       console.error("Error sending password recovery:", error);
@@ -81,13 +94,12 @@ export class AuthService {
   }
 
   // Complete password recovery
-  async completePasswordRecovery(
-    userId: string,
-    secret: string,
-    password: string
-  ) {
+  async completePasswordRecovery(code: string, password: string) {
     try {
-      const result = await account.updateRecovery(userId, secret, password);
+      const result = await stack.resetPassword({
+        code,
+        password,
+      });
       return result;
     } catch (error) {
       console.error("Error completing password recovery:", error);
@@ -98,10 +110,14 @@ export class AuthService {
   // Send email verification
   async sendEmailVerification() {
     try {
-      const result = await account.createVerification(
-        `${window.location.origin}/verify-email`
-      );
-      return result;
+      const user = stack.getUser();
+      if (user) {
+        const result = await user.sendVerificationEmail({
+          redirectUrl: `${window.location.origin}/verify-email`,
+        });
+        return result;
+      }
+      throw new Error("No user logged in");
     } catch (error) {
       console.error("Error sending email verification:", error);
       throw error;
@@ -109,9 +125,9 @@ export class AuthService {
   }
 
   // Complete email verification
-  async completeEmailVerification(userId: string, secret: string) {
+  async completeEmailVerification(code: string) {
     try {
-      const result = await account.updateVerification(userId, secret);
+      const result = await stack.verifyEmail({ code });
       return result;
     } catch (error) {
       console.error("Error completing email verification:", error);

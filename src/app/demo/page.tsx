@@ -60,9 +60,7 @@ export default function DemoPage() {
   return (
     <div className="min-h-screen bg-gray-50 py-12">
       <div className="max-w-2xl mx-auto">
-        <h1 className="text-3xl font-bold text-center mb-8">
-          Appwrite Authentication Demo
-        </h1>
+        <h1 className="text-3xl font-bold text-center mb-8">Stack Auth Demo</h1>
 
         <div className="flex justify-center mb-6">
           <div className="flex bg-gray-200 rounded-lg p-1">
