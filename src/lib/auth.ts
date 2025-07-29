@@ -63,7 +63,12 @@ export class AuthService {
   // Logout
   async logout() {
     try {
-      await stack.redirectToSignOut();
+      // Get current user to access auth methods
+      const user = await stack.getUser();
+      if (user) {
+        // Use the user's signOut method to properly logout
+        await user.signOut();
+      }
     } catch (error) {
       console.error("Error logging out:", error);
       throw error;
@@ -73,7 +78,12 @@ export class AuthService {
   // Logout from all sessions
   async logoutAll() {
     try {
-      await stack.redirectToSignOut();
+      // Get current user to access auth methods
+      const user = await stack.getUser();
+      if (user) {
+        // Sign out from all sessions
+        await user.signOut();
+      }
     } catch (error) {
       console.error("Error logging out from all sessions:", error);
       throw error;

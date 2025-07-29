@@ -31,6 +31,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
+  // Use Stack Auth's useUser hook for reactive user state
+  const stackUser = stack.useUser();
+
   const refreshUser = async () => {
     try {
       const currentUser = await authService.getCurrentUser();
@@ -41,42 +44,24 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   useEffect(() => {
-    // Subscribe to Stack Auth user changes
-    const unsubscribe = stack.onUserChange((stackUser) => {
-      if (stackUser) {
-        setUser({
-          id: stackUser.id,
-          primaryEmail: stackUser.primaryEmail,
-          displayName: stackUser.displayName,
-        });
-      } else {
-        setUser(null);
-      }
-      setLoading(false);
-    });
-
-    // Initial user check
-    const initialUser = stack.getUser();
-    if (initialUser) {
+    // Update local user state when Stack user changes
+    if (stackUser) {
       setUser({
-        id: initialUser.id,
-        primaryEmail: initialUser.primaryEmail,
-        displayName: initialUser.displayName,
+        id: stackUser.id,
+        primaryEmail: stackUser.primaryEmail,
+        displayName: stackUser.displayName,
       });
+    } else {
+      setUser(null);
     }
     setLoading(false);
-
-    // Cleanup subscription on unmount
-    return () => {
-      unsubscribe();
-    };
-  }, []);
+  }, [stackUser]);
 
   const login = async (email: string, password: string) => {
     setLoading(true);
     try {
       await authService.login(email, password);
-      // User state will be updated automatically via the subscription
+      // User state will be updated automatically via useUser hook
     } catch (error) {
       setLoading(false);
       throw error;
@@ -87,7 +72,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setLoading(true);
     try {
       await authService.createAccount(email, password, name);
-      // User state will be updated automatically via the subscription
+      // User state will be updated automatically via useUser hook
     } catch (error) {
       setLoading(false);
       throw error;
@@ -98,7 +83,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setLoading(true);
     try {
       await authService.logout();
-      // User state will be updated automatically via the subscription
+      // User state will be updated automatically via useUser hook
+      // Loading will be set to false when useUser hook detects the change
     } catch (error) {
       setLoading(false);
       throw error;
